@@ -1,0 +1,3 @@
+0 Trinkflasche
+1 Handschuhe
+2 Mütze
