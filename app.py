@@ -1,25 +1,33 @@
-import streamlit as st
+import tensorflow as tf
+import numpy as np
 from PIL import Image
 
-from ki_kleidung import predict_clothing
-from farbanalyse import detect_dominant_colors
+MODEL_PATH = "model/model.h5"
+LABELS_PATH = "labels.txt"
 
-st.title("👕 Digitales Fundbüro")
+# 🔑 WICHTIG: compile=False
+model = tf.keras.models.load_model(
+    MODEL_PATH,
+    compile=False
+)
 
-uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "png"])
+with open(LABELS_PATH, "r", encoding="utf-8") as f:
+    class_names = [line.strip() for line in f]
 
-if uploaded_file:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image)
+def preprocess_image(image: Image.Image):
+    image = image.resize((224, 224))
+    img = np.array(image).astype("float32") / 255.0
+    img = np.expand_dims(img, axis=0)
+    return img
 
-    category, probs = predict_clothing(image)
-    colors = detect_dominant_colors(image)
+def predict_clothing(image: Image.Image):
+    img = preprocess_image(image)
+    predictions = model.predict(img)[0]
 
-    st.subheader("🤖 KI-Ergebnis")
-    st.write("Kategorie:", category)
+    results = {
+        class_names[i]: float(pred * 100)
+        for i, pred in enumerate(predictions)
+    }
 
-    st.subheader("📊 Wahrscheinlichkeiten")
-    st.json(probs)
-
-    st.subheader("🎨 Farben")
-    st.write(colors)
+    best_category = max(results, key=results.get)
+    return best_category, results
