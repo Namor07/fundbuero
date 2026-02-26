@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 
-MODEL_PATH = "model/model.h5"
+MODEL_PATH = "model/keras_model.h5"
 LABELS_PATH = "labels.txt"
 
 # 🔑 WICHTIG: compile=False
