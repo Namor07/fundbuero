@@ -7,7 +7,7 @@ LABELS_PATH = "labels.txt"
 
 # 🔑 WICHTIG: compile=False
 model = tf.keras.models.load_model(
-    MODEL_PATH,
+    "model/",
     compile=False
 )
 
