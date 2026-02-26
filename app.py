@@ -1,81 +1,69 @@
-from flask import Flask, render_template, request
+import streamlit as st
 import tensorflow as tf
-import numpy as np
 from PIL import Image
+import numpy as np
 from supabase import create_client
 import uuid
 import io
 
-# ================================
+# ------------------------------
 # Supabase Konfiguration
-# ================================
+# ------------------------------
 SUPABASE_URL = "https://DEIN-PROJEKT.supabase.co"
 SUPABASE_KEY = "DEIN_SERVICE_ROLE_KEY"
-
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ================================
-# Flask & KI Setup
-# ================================
-app = Flask(__name__)
-model = tf.keras.models.load_model(
-    "model/keras_model.h5",
-    compile=False
-)
+# ------------------------------
+# KI-Modell laden
+# ------------------------------
+model = tf.keras.models.load_model("model/keras_model.h5", compile=False)
 
+# Labels laden
 with open("labels.txt", "r", encoding="utf-8") as f:
     labels = [line.strip() for line in f.readlines()]
 
-# ================================
-# Hauptseite
-# ================================
-@app.route("/", methods=["GET", "POST"])
-def index():
-    results = None
-    image_url = None
+# ------------------------------
+# Streamlit UI
+# ------------------------------
+st.title("👕 Digitales Fundbüro")
 
-    if request.method == "POST":
-        file = request.files["image"]
+uploaded_file = st.file_uploader("Bild hochladen", type=["jpg","jpeg","png"])
 
-        if file:
-            # Eindeutiger Dateiname
-            filename = f"{uuid.uuid4()}.jpg"
+if uploaded_file:
+    # Bild anzeigen
+    st.image(uploaded_file, caption="Hochgeladenes Bild", use_column_width=True)
 
-            # Bild in Bytes umwandeln
-            image_bytes = file.read()
+    # --------------------------
+    # Supabase Upload
+    # --------------------------
+    filename = f"{uuid.uuid4()}.jpg"
+    image_bytes = uploaded_file.read()
+    supabase.storage.from_("fundbilder").upload(filename, image_bytes, {"content-type":"image/jpeg"})
+    public_url = supabase.storage.from_("fundbilder").get_public_url(filename)
+    st.write(f"📦 Bild gespeichert: [Link]({public_url})")
 
-            # Upload zu Supabase Storage
-            supabase.storage.from_("fundbilder").upload(
-                filename,
-                image_bytes,
-                {"content-type": "image/jpeg"}
-            )
+    # --------------------------
+    # KI-Klassifikation
+    # --------------------------
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image = image.resize((224, 224))
+    image_array = np.asarray(image) / 255.0
+    image_array = np.expand_dims(image_array, axis=0)
 
-            # Öffentliche Bild-URL
-            image_url = supabase.storage.from_("fundbilder").get_public_url(filename)
-
-            # KI-Bildverarbeitung
-            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            image = image.resize((224, 224))
-            image_array = np.asarray(image) / 255.0
-            image_array = np.expand_dims(image_array, axis=0)
-
-            predictions = model.predict(image_array)[0]
-
-            results = []
-            for label, value in zip(labels, predictions):
-                results.append({
-                    "label": label,
-                    "percent": round(float(value) * 100, 2)
-                })
-
-            results.sort(key=lambda x: x["percent"], reverse=True)
-
-    return render_template(
-        "index.html",
-        results=results,
-        image_url=image_url
+    predictions = model.predict(image_array)[0]
+    # Ergebnisse sortieren
+    results = sorted(
+        [{"label": l, "percent": float(p)*100} for l,p in zip(labels, predictions)],
+        key=lambda x: x["percent"],
+        reverse=True
     )
 
-if __name__ == "__main__":
-    app.run(debug=True)
+    # --------------------------
+    # Ergebnisse anzeigen
+    # --------------------------
+    st.subheader("🔍 KI-Ergebnis")
+    for i, r in enumerate(results):
+        if i==0:
+            st.markdown(f"**{r['label']} – {r['percent']:.2f}%**")
+        else:
+            st.write(f"{r['label']} – {r['percent']:.2f}%")
