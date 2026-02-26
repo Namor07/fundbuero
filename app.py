@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-import tensorflow as tf
+import tensorflow as tf; print(tf.__version__)
 import numpy as np
 from PIL import Image
 from supabase import create_client
