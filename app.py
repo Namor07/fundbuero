@@ -18,7 +18,10 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Flask & KI Setup
 # ================================
 app = Flask(__name__)
-model = tf.keras.models.load_model("model/keras_model.h5")
+model = tf.keras.models.load_model(
+    "model/keras_model.h5",
+    compile=False
+)
 
 with open("labels.txt", "r", encoding="utf-8") as f:
     labels = [line.strip() for line in f.readlines()]
