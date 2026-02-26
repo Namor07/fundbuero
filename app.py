@@ -23,7 +23,7 @@ import io
 # 🔹 KONFIGURATION
 # ==============================
 
-MODEL_PATH = "model/model.h5"
+MODEL_PATH = "model/keras_model.h5"
 LABELS_PATH = "labels.txt"
 
 SUPABASE_URL = "DEINE_SUPABASE_URL"
