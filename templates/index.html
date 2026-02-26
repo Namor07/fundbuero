@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Digitales Fundbüro</title>
+</head>
+<body>
+
+<h1>👕 Digitales Fundbüro</h1>
+
+<form method="POST" enctype="multipart/form-data">
+    <input type="file" name="image" accept="image/*" required>
+    <button type="submit">Bild hochladen</button>
+</form>
+
+{% if image_url %}
+    <h2>📷 Hochgeladenes Bild</h2>
+    <img src="{{ image_url }}" width="300">
+{% endif %}
+
+{% if results %}
+    <h2>🔍 KI-Ergebnis</h2>
+    <ul>
+        {% for r in results %}
+            <li>
+                {% if loop.index0 == 0 %}
+                    <strong>{{ r.label }} – {{ r.percent }} %</strong>
+                {% else %}
+                    {{ r.label }} – {{ r.percent }} %
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+</body>
+</html>
