@@ -9,10 +9,10 @@ import io
 # ------------------------------
 # Supabase Konfiguration
 # ------------------------------
-SUPABASE_URL = "https://DEIN-PROJEKT.supabase.co"
-SUPABASE_KEY = "DEIN_SERVICE_ROLE_KEY"
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ------------------------------
 # KI-Modell laden
 # ------------------------------
