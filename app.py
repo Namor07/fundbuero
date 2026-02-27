@@ -1,69 +1,151 @@
 import streamlit as st
 import tensorflow as tf
-from PIL import Image
 import numpy as np
-from supabase import create_client
 import uuid
-import io
+from supabase import create_client
+from PIL import Image
 
-# ------------------------------
-# Supabase Konfiguration
-# ------------------------------
+# =========================
+# STREAMLIT SEITENLAYOUT
+# =========================
+st.set_page_config(
+    page_title="Digitales Fundbüro",
+    page_icon="🧥",
+    layout="centered"
+)
+
+# =========================
+# STYLING (CSS)
+# =========================
+st.markdown("""
+<style>
+.title {
+    text-align: center;
+    font-size: 40px;
+    font-weight: bold;
+}
+.subtitle {
+    text-align: center;
+    font-size: 18px;
+    color: #555;
+    margin-bottom: 30px;
+}
+.card {
+    background-color: #f7f7f7;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+}
+.result {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2E8B57;
+    text-align: center;
+}
+</style>
+
+<div class="title">🧥 Digitales Fundbüro</div>
+<div class="subtitle">
+Lade ein Bild eines gefundenen Kleidungsstücks hoch<br>
+und lasse es automatisch erkennen
+</div>
+""", unsafe_allow_html=True)
+
+# =========================
+# SUPABASE VERBINDUNG
+# =========================
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-# ------------------------------
-# KI-Modell laden
-# ------------------------------
-model = tf.keras.models.load_model("model/keras_model.h5", compile=False)
+
+# =========================
+# KI-MODELL LADEN
+# =========================
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("model/keras_model.h5")
+
+model = load_model()
 
 # Labels laden
-with open("labels.txt", "r", encoding="utf-8") as f:
+with open("model/labels.txt", "r") as f:
     labels = [line.strip() for line in f.readlines()]
 
-# ------------------------------
-# Streamlit UI
-# ------------------------------
-st.title("👕 Digitales Fundbüro")
+# =========================
+# BILD UPLOAD
+# =========================
+st.markdown('<div class="card">', unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Bild hochladen", type=["jpg","jpeg","png"])
+uploaded_file = st.file_uploader(
+    "📤 Bild eines Kleidungsstücks hochladen",
+    type=["jpg", "jpeg", "png"]
+)
 
-if uploaded_file:
+st.markdown('</div>', unsafe_allow_html=True)
+
+# =========================
+# VERARBEITUNG NACH UPLOAD
+# =========================
+if uploaded_file is not None:
+
     # Bild anzeigen
-    st.image(uploaded_file, caption="Hochgeladenes Bild", use_column_width=True)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.image(uploaded_file, caption="📷 Hochgeladenes Fundstück", use_column_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # --------------------------
-    # Supabase Upload
-    # --------------------------
-    filename = f"{uuid.uuid4()}.jpg"
-    image_bytes = uploaded_file.read()
-    supabase.storage.from_("fundbilder").upload(filename, image_bytes, {"content-type":"image/jpeg"})
-    public_url = supabase.storage.from_("fundbilder").get_public_url(filename)
-    st.write(f"📦 Bild gespeichert: [Link]({public_url})")
-
-    # --------------------------
-    # KI-Klassifikation
-    # --------------------------
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    image = image.resize((224, 224))
-    image_array = np.asarray(image) / 255.0
+    # =========================
+    # BILD FÜR KI VORBEREITEN
+    # =========================
+    image = Image.open(uploaded_file).convert("RGB")
+    image = image.resize((224, 224))  # Standard Teachable Machine Größe
+    image_array = np.array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
+    # =========================
+    # KI VORHERSAGE
+    # =========================
     predictions = model.predict(image_array)[0]
-    # Ergebnisse sortieren
-    results = sorted(
-        [{"label": l, "percent": float(p)*100} for l,p in zip(labels, predictions)],
-        key=lambda x: x["percent"],
-        reverse=True
+
+    best_index = np.argmax(predictions)
+    best_label = labels[best_index]
+    best_confidence = predictions[best_index] * 100
+
+    # =========================
+    # ERGEBNIS ANZEIGEN (NUR 1!)
+    # =========================
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+
+    st.markdown(
+        f"""
+        <div class="result">
+        ✅ Erkannte Kategorie:<br>
+        {best_label}<br>
+        ({best_confidence:.1f} % Sicherheit)
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    # --------------------------
-    # Ergebnisse anzeigen
-    # --------------------------
-    st.subheader("🔍 KI-Ergebnis")
-    for i, r in enumerate(results):
-        if i==0:
-            st.markdown(f"**{r['label']} – {r['percent']:.2f}%**")
-        else:
-            st.write(f"{r['label']} – {r['percent']:.2f}%")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # =========================
+    # BILD ZU SUPABASE HOCHLADEN
+    # =========================
+    image_bytes = uploaded_file.getvalue()
+    filename = f"{uuid.uuid4()}.jpg"
+
+    try:
+        supabase.storage.from_("fundbilder").upload(
+            path=filename,
+            file=image_bytes,
+            file_options={"content-type": "image/jpeg"}
+        )
+
+        image_url = supabase.storage.from_("fundbilder").get_public_url(filename)
+
+        st.success("📦 Bild erfolgreich im Fundbüro gespeichert!")
+
+    except Exception as e:
+        st.error("❌ Fehler beim Upload zu Supabase")
+        st.exception(e)
