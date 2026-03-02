@@ -132,8 +132,8 @@ if uploaded_file is not None:
 # =========================
 # BILD + DATEN SPEICHERN
 # =========================
-image_bytes = uploaded_file.getvalue()
-filename = f"{uuid.uuid4()}.jpg"
+    image_bytes = uploaded_file.getvalue()
+    filename = f"{uuid.uuid4()}.jpg"
 
 try:
     # 1️⃣ Bild in Storage
