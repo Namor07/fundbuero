@@ -129,23 +129,31 @@ if uploaded_file is not None:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # =========================
-    # BILD ZU SUPABASE HOCHLADEN
-    # =========================
-    image_bytes = uploaded_file.getvalue()
-    filename = f"{uuid.uuid4()}.jpg"
+# =========================
+# BILD + DATEN SPEICHERN
+# =========================
+image_bytes = uploaded_file.getvalue()
+filename = f"{uuid.uuid4()}.jpg"
 
-    try:
-        supabase.storage.from_("fundbilder").upload(
-            path=filename,
-            file=image_bytes,
-            file_options={"content-type": "image/jpeg"}
-        )
+try:
+    # 1️⃣ Bild in Storage
+    supabase.storage.from_("fundbilder").upload(
+        path=filename,
+        file=image_bytes,
+        file_options={"content-type": "image/jpeg"}
+    )
 
-        image_url = supabase.storage.from_("fundbilder").get_public_url(filename)
+    image_url = supabase.storage.from_("fundbilder").get_public_url(filename)
 
-        st.success("📦 Bild erfolgreich im Fundbüro gespeichert!")
+    # 2️⃣ Metadaten in Datenbank
+    supabase.table("fundstuecke").insert({
+        "image_url": image_url,
+        "category": best_label,
+        "confidence": float(best_confidence)
+    }).execute()
 
-    except Exception as e:
-        st.error("❌ Fehler beim Upload zu Supabase")
-        st.exception(e)
+    st.success("📦 Fundstück wurde gespeichert!")
+
+except Exception as e:
+    st.error("❌ Fehler beim Speichern")
+    st.exception(e)
