@@ -5,6 +5,9 @@ import uuid
 from supabase import create_client
 from PIL import Image
 
+if "image_saved" not in st.session_state:
+    st.session_state.image_saved = False
+
 # =========================
 # STREAMLIT SEITENLAYOUT
 # =========================
@@ -88,6 +91,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # VERARBEITUNG NACH UPLOAD
 # =========================
 if uploaded_file is not None:
+    st.session_state.image_saved = False
 
     # =========================
     # BILD ANZEIGEN
@@ -118,9 +122,14 @@ if uploaded_file is not None:
     image_bytes = uploaded_file.getvalue()
     filename = f"{uuid.uuid4()}.jpg"
 
-    # =========================
-    # SUPABASE STORAGE UPLOAD
-    # =========================
+# =========================
+# NUR EINMAL SPEICHERN
+# =========================
+if not st.session_state.image_saved:
+
+    image_bytes = uploaded_file.getvalue()
+    filename = f"{uuid.uuid4()}.jpg"
+
     supabase.storage.from_("fundbilder").upload(
         path=filename,
         file=image_bytes,
@@ -129,16 +138,16 @@ if uploaded_file is not None:
 
     image_url = supabase.storage.from_("fundbilder").get_public_url(filename)
 
-    # =========================
-    # DATENBANK SPEICHERN
-    # =========================
     supabase.table("fundstuecke").insert({
         "image_url": image_url,
         "category": best_label,
         "confidence": float(best_confidence)
     }).execute()
 
-    st.success("📦 Fundstück erfolgreich gespeichert!")
+    st.session_state.image_saved = True
+    st.success("📦 Fundstück wurde gespeichert!")
+else:
+    st.info("ℹ️ Dieses Bild wurde bereits gespeichert.")
 
 # =========================
 # FUNDBÜRO DURCHSUCHEN
