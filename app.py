@@ -89,16 +89,16 @@ st.markdown('</div>', unsafe_allow_html=True)
 # =========================
 if uploaded_file is not None:
 
-    # Bild anzeigen
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    # =========================
+    # BILD ANZEIGEN
+    # =========================
     st.image(uploaded_file, caption="📷 Hochgeladenes Fundstück", use_column_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # =========================
     # BILD FÜR KI VORBEREITEN
     # =========================
     image = Image.open(uploaded_file).convert("RGB")
-    image = image.resize((224, 224))  # Standard Teachable Machine Größe
+    image = image.resize((224, 224))
     image_array = np.array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
@@ -106,37 +106,21 @@ if uploaded_file is not None:
     # KI VORHERSAGE
     # =========================
     predictions = model.predict(image_array)[0]
-
     best_index = np.argmax(predictions)
     best_label = labels[best_index]
     best_confidence = predictions[best_index] * 100
 
+    st.success(f"✅ Erkannte Kategorie: {best_label} ({best_confidence:.1f} %)")
+
     # =========================
-    # ERGEBNIS ANZEIGEN (NUR 1!)
+    # DATEI VORBEREITEN
     # =========================
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    st.markdown(
-        f"""
-        <div class="result">
-        ✅ Erkannte Kategorie:<br>
-        {best_label}<br>
-        ({best_confidence:.1f} % Sicherheit)
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# =========================
-# BILD + DATEN SPEICHERN
-# =========================
     image_bytes = uploaded_file.getvalue()
     filename = f"{uuid.uuid4()}.jpg"
 
-try:
-    # 1️⃣ Bild in Storage
+    # =========================
+    # SUPABASE STORAGE UPLOAD
+    # =========================
     supabase.storage.from_("fundbilder").upload(
         path=filename,
         file=image_bytes,
@@ -145,18 +129,16 @@ try:
 
     image_url = supabase.storage.from_("fundbilder").get_public_url(filename)
 
-    # 2️⃣ Metadaten in Datenbank
+    # =========================
+    # DATENBANK SPEICHERN
+    # =========================
     supabase.table("fundstuecke").insert({
         "image_url": image_url,
         "category": best_label,
         "confidence": float(best_confidence)
     }).execute()
 
-    st.success("📦 Fundstück wurde gespeichert!")
-
-except Exception as e:
-    st.error("❌ Fehler beim Speichern")
-    st.exception(e)
+    st.success("📦 Fundstück erfolgreich gespeichert!")
 
 # =========================
 # FUNDBÜRO DURCHSUCHEN
