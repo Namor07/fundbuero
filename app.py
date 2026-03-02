@@ -157,3 +157,46 @@ try:
 except Exception as e:
     st.error("❌ Fehler beim Speichern")
     st.exception(e)
+
+# =========================
+# FUNDBÜRO DURCHSUCHEN
+# =========================
+st.markdown("## 🔍 Fundstücke durchsuchen")
+
+# Kategorien aus Labels
+selected_category = st.selectbox(
+    "Kategorie auswählen",
+    options=["Alle"] + labels
+)
+
+# Daten abrufen
+if selected_category == "Alle":
+    response = supabase.table("fundstuecke").select("*").order("created_at", desc=True).execute()
+else:
+    response = supabase.table("fundstuecke") \
+        .select("*") \
+        .eq("category", selected_category) \
+        .order("created_at", desc=True) \
+        .execute()
+
+data = response.data
+
+# =========================
+# ERGEBNISSE ANZEIGEN
+# =========================
+if not data:
+    st.info("Keine Fundstücke gefunden.")
+else:
+    for item in data:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+
+        st.image(item["image_url"], use_column_width=True)
+        st.markdown(
+            f"""
+            <b>Kategorie:</b> {item['category']}<br>
+            <b>KI-Sicherheit:</b> {item['confidence']:.1f} %
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown('</div>', unsafe_allow_html=True)
