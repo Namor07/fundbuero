@@ -7,13 +7,6 @@ from PIL import Image
 
 if "image_saved" not in st.session_state:
     st.session_state.image_saved = False
-
-uploaded_file = st.file_uploader(
-    "📤 Bild eines Kleidungsstücks hochladen",
-    type=["jpg", "jpeg", "png"]
-)
-if uploaded_file is not None:
-    st.session_state.image_saved = False
     
 # =========================
 # STREAMLIT SEITENLAYOUT
@@ -89,7 +82,8 @@ st.markdown('<div class="card">', unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader(
     "📤 Bild eines Kleidungsstücks hochladen",
-    type=["jpg", "jpeg", "png"]
+    type=["jpg", "jpeg", "png"],
+    key="fundbild_upload"  # WICHTIG!
 )
 
 st.markdown('</div>', unsafe_allow_html=True)
