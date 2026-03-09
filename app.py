@@ -104,10 +104,12 @@ with open("model/labels.txt", "r") as f:
 st.markdown('<div class="card">', unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader(
-    "📤 Bild eines Kleidungsstücks hochladen",
+    "📤 Bild hochladen",
     type=["jpg", "jpeg", "png"],
     key="fundbild_upload"
 )
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 if uploaded_file is not None:
     current_file_id = (uploaded_file.name, uploaded_file.size)
@@ -231,3 +233,20 @@ else:
         )
 
         st.markdown('</div>', unsafe_allow_html=True)
+
+for item in results:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        try:
+            st.image(item["image_url"], use_column_width=True)
+        except:
+            st.caption("⚠️ Bild nicht verfügbar")
+
+    with col2:
+        st.markdown(f"**Kategorie:** {item['category']}")
+        st.markdown(f"**Sicherheit:** {item['confidence']:.1f} %")
+
+    st.markdown('</div>', unsafe_allow_html=True)
