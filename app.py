@@ -204,59 +204,32 @@ if uploaded_file is not None:
 # =========================
 
 st.markdown("---")
-st.header("🔍 Gefundene Kleidungsstücke durchsuchen")
+st.header("🔍 Fundstücke durchsuchen")
 
-# Kategorien aus Labels
 selected_category = st.selectbox(
-    "Kategorie auswählen",
-    options=["Alle"] + labels
+    "Kategorie wählen",
+    ["Alle"] + labels
 )
 
-# Daten abrufen
+results = []
+
 if selected_category == "Alle":
-    response = supabase.table("fundstuecke").select("*").order("created_at", desc=True).execute()
+    results = supabase.table("fundstuecke").select("*").execute().data
 else:
-    response = supabase.table("fundstuecke") \
+    results = supabase.table("fundstuecke") \
         .select("*") \
         .eq("category", selected_category) \
-        .order("created_at", desc=True) \
-        .execute()
+        .execute().data
 
-data = response.data
-
-# =========================
-# ERGEBNISSE ANZEIGEN
-# =========================
-if not data:
-    st.info("Keine Fundstücke gefunden.")
-else:
-    for item in data:
+if results:
+    for item in results:
         st.markdown('<div class="card">', unsafe_allow_html=True)
-
-        st.image(item["image_url"], use_column_width=True)
-        st.markdown(
-            f"""
-            <b>Kategorie:</b> {item['category']}<br>
-            <b>KI-Sicherheit:</b> {item['confidence']:.1f} %
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-for item in results:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
         try:
-            st.image(item["image_url"], use_column_width=True)
+            st.image(item["image_url"])
         except:
             st.caption("⚠️ Bild nicht verfügbar")
-
-    with col2:
-        st.markdown(f"**Kategorie:** {item['category']}")
-        st.markdown(f"**Sicherheit:** {item['confidence']:.1f} %")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.write(f"**Kategorie:** {item['category']}")
+        st.write(f"**Sicherheit:** {item['confidence']:.1f} %")
+        st.markdown('</div>', unsafe_allow_html=True)
+else:
+    st.info("Keine Fundstücke gefunden.")
