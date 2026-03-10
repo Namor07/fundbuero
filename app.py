@@ -159,8 +159,12 @@ if uploaded_file is not None:
     if not st.session_state.image_saved:
 
         image_bytes = uploaded_file.getvalue()
-        display_category = best_label.lower()   # z.B. "mütze"
-        storage_category = CATEGORY_TO_STORAGE[display_category]
+        display_category = best_label.strip().lower()
+        storage_category = CATEGORY_TO_STORAGE.get(display_category)
+
+        if storage_category is None:
+            st.error(f"❌ Unbekannte Kategorie: '{display_category}'")
+            st.stop()
 
         storage_path = f"{storage_category}/{uuid.uuid4()}.jpg"
         
